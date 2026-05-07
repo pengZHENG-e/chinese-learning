@@ -41,48 +41,15 @@ Open http://localhost:3000.
 
 ## Cross-device sync setup
 
-The app works fully without sign-in (progress saved locally). To enable Google sign-in + cloud sync, you need accounts on **Supabase** and **Google Cloud**, then 5 env vars in Vercel.
+The app works fully without sign-in (progress saved locally). To enable cloud sync via email magic-link login, all you need is a free Supabase project.
 
-### 1 · Supabase (database)
+1. Sign up at [supabase.com](https://supabase.com), click **New Project**, pick any region + DB password, wait ~1 min.
+2. **SQL Editor** → paste contents of [`supabase-schema.sql`](./supabase-schema.sql) → **Run**.
+3. **Settings → API** → copy `Project URL` and `anon` (public) key.
+4. Add them to your Vercel project (**Settings → Environment Variables**) as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, then redeploy.
+5. (Optional) **Authentication → URL Configuration** in Supabase: set Site URL to your Vercel URL, and add `http://localhost:3000` to additional redirect URLs.
 
-1. Sign up / log in at [supabase.com](https://supabase.com), click **New Project**, pick any region, set a DB password, wait ~1 min.
-2. Open **SQL Editor** → paste contents of [`supabase-schema.sql`](./supabase-schema.sql) → **Run**.
-3. **Settings → API** → copy:
-   - `Project URL` → `SUPABASE_URL`
-   - `service_role` key (secret, never ship to client) → `SUPABASE_SERVICE_ROLE_KEY`
-
-### 2 · Google OAuth
-
-1. Open [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials).
-2. **+ Create credentials → OAuth client ID** → application type **Web application**.
-3. **Authorized redirect URIs** — add **both**:
-   - `https://YOUR-DOMAIN.vercel.app/api/auth/callback/google`
-   - `http://localhost:3000/api/auth/callback/google` (for local dev)
-4. **Create** → copy `Client ID` and `Client secret`.
-
-### 3 · Generate AUTH_SECRET
-
-```bash
-openssl rand -base64 32
-```
-
-### 4 · Set Vercel env vars
-
-In your Vercel project → **Settings → Environment Variables**, add (Production + Preview + Development):
-
-| Name | Value |
-|---|---|
-| `AUTH_SECRET` | the random string from step 3 |
-| `AUTH_GOOGLE_ID` | from step 2 |
-| `AUTH_GOOGLE_SECRET` | from step 2 |
-| `SUPABASE_URL` | from step 1 |
-| `SUPABASE_SERVICE_ROLE_KEY` | from step 1 |
-
-Then **Deployments → … → Redeploy** the latest one.
-
-### Local dev
-
-Copy `.env.example` → `.env.local`, fill the same 5 values, then `bun run dev`.
+That's it — no Google OAuth, no service-role keys. RLS keeps each user's progress private. Local dev: copy `.env.example` → `.env.local`, fill the same 2 values, `bun run dev`.
 
 ## Project layout
 

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "学中文 · Learn Chinese",
@@ -18,10 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen">
-        <Providers>
-          <Navbar />
-          <main className="mx-auto max-w-5xl px-4 pb-24 pt-6">{children}</main>
-        </Providers>
+        <Navbar />
+        <main className="mx-auto max-w-5xl px-4 pb-24 pt-6">{children}</main>
       </body>
     </html>
   );
