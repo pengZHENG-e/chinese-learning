@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, BookOpen, PenLine, Headphones, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AuthButton from "./AuthButton";
 
 const TABS = [
   { href: "/", label: "Home", icon: Home },
@@ -22,25 +23,28 @@ export default function Navbar() {
             <span className="text-2xl">🐼</span>
             <span className="hanzi text-xl font-bold text-brand-600">学中文</span>
           </Link>
-          <nav className="hidden gap-1 md:flex">
-            {TABS.map(({ href, label, icon: Icon }) => {
-              const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
-                    active ? "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
-                           : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  )}
-                >
-                  <Icon size={16} />
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
+          <div className="flex items-center gap-3">
+            <nav className="hidden gap-1 md:flex">
+              {TABS.map(({ href, label, icon: Icon }) => {
+                const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                      active ? "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
+                             : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    )}
+                  >
+                    <Icon size={16} />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+            <AuthButton />
+          </div>
         </div>
       </header>
 

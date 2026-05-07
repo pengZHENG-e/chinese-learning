@@ -13,7 +13,7 @@ A modern, friendly Chinese-learning web app for English speakers. Built with Nex
 - **Gamification** — XP, levels (100 XP / level), daily streak, per-lesson stats.
 - **Stats page** — lessons completed, words mastered, due today, recent activity.
 - **Mobile-first UI** — bottom tab bar on mobile, sticky top nav on desktop, dark mode auto.
-- **Zero backend** — progress lives in `localStorage`. No login, no database.
+- **Cross-device sync** — sign in with Google to sync progress (XP, streak, reviews, lessons) across devices via Supabase. Works without sign-in too — local-only mode.
 
 ## Tech stack
 
@@ -39,19 +39,50 @@ bun run start
 
 Open http://localhost:3000.
 
-## Deploy to Vercel
+## Cross-device sync setup
 
-1. Push this repo to GitHub.
-2. On [vercel.com](https://vercel.com), click **New Project** → import the repo.
-3. Framework preset auto-detects as Next.js. No env vars needed.
-4. **Deploy.**
+The app works fully without sign-in (progress saved locally). To enable Google sign-in + cloud sync, you need accounts on **Supabase** and **Google Cloud**, then 5 env vars in Vercel.
 
-Or with the Vercel CLI:
+### 1 · Supabase (database)
+
+1. Sign up / log in at [supabase.com](https://supabase.com), click **New Project**, pick any region, set a DB password, wait ~1 min.
+2. Open **SQL Editor** → paste contents of [`supabase-schema.sql`](./supabase-schema.sql) → **Run**.
+3. **Settings → API** → copy:
+   - `Project URL` → `SUPABASE_URL`
+   - `service_role` key (secret, never ship to client) → `SUPABASE_SERVICE_ROLE_KEY`
+
+### 2 · Google OAuth
+
+1. Open [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials).
+2. **+ Create credentials → OAuth client ID** → application type **Web application**.
+3. **Authorized redirect URIs** — add **both**:
+   - `https://YOUR-DOMAIN.vercel.app/api/auth/callback/google`
+   - `http://localhost:3000/api/auth/callback/google` (for local dev)
+4. **Create** → copy `Client ID` and `Client secret`.
+
+### 3 · Generate AUTH_SECRET
 
 ```bash
-bun add -g vercel
-vercel
+openssl rand -base64 32
 ```
+
+### 4 · Set Vercel env vars
+
+In your Vercel project → **Settings → Environment Variables**, add (Production + Preview + Development):
+
+| Name | Value |
+|---|---|
+| `AUTH_SECRET` | the random string from step 3 |
+| `AUTH_GOOGLE_ID` | from step 2 |
+| `AUTH_GOOGLE_SECRET` | from step 2 |
+| `SUPABASE_URL` | from step 1 |
+| `SUPABASE_SERVICE_ROLE_KEY` | from step 1 |
+
+Then **Deployments → … → Redeploy** the latest one.
+
+### Local dev
+
+Copy `.env.example` → `.env.local`, fill the same 5 values, then `bun run dev`.
 
 ## Project layout
 
@@ -89,4 +120,5 @@ lib/
 ## Notes
 
 - **TTS voice** depends on the user's OS. macOS / iOS ships with high-quality `zh-CN` voices (Tingting, Sinji); Windows uses Huihui; Linux quality varies.
-- **Progress is per-browser**. Clearing site data wipes XP / streak. To support sync, swap `lib/storage.ts` for a real backend (Supabase, Vercel Postgres, etc.).
+- **Without sign-in**, progress is per-browser; clearing site data wipes XP / streak. With sign-in, progress is in Supabase keyed by Google email.
+- **Sync strategy**: on sign-in, the larger of {local, remote} progress wins (by total XP + reviews + lessons). After that, every change debounce-pushes to the server (1.5s).
