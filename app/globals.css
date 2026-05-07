@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 255 247 237;
+  --foreground: 24 24 27;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 17 17 19;
+    --foreground: 245 245 244;
+  }
+}
+
+html, body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-brand-500 text-white shadow-[0_4px_0_0_theme(colors.brand.700)] hover:bg-brand-600 active:translate-y-1 active:shadow-[0_0_0_0_theme(colors.brand.700)];
+  }
+  .btn-ghost {
+    @apply btn bg-white text-zinc-800 border-2 border-zinc-200 shadow-[0_4px_0_0_theme(colors.zinc.300)] hover:bg-zinc-50 active:translate-y-1 active:shadow-[0_0_0_0_theme(colors.zinc.300)] dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700 dark:shadow-[0_4px_0_0_theme(colors.zinc.900)];
+  }
+  .btn-success {
+    @apply btn bg-emerald-500 text-white shadow-[0_4px_0_0_theme(colors.emerald.700)] hover:bg-emerald-600 active:translate-y-1 active:shadow-[0_0_0_0_theme(colors.emerald.700)];
+  }
+  .btn-danger {
+    @apply btn bg-rose-500 text-white shadow-[0_4px_0_0_theme(colors.rose.700)] hover:bg-rose-600 active:translate-y-1 active:shadow-[0_0_0_0_theme(colors.rose.700)];
+  }
+  .card {
+    @apply rounded-2xl bg-white border-2 border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800;
+  }
+  .hanzi {
+    font-family: theme('fontFamily.hanzi');
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(0 0 0 / 0.15); border-radius: 8px; }
