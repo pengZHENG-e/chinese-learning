@@ -41,15 +41,13 @@ Open http://localhost:3000.
 
 ## Cross-device sync setup
 
-The app works fully without sign-in (progress saved locally). To enable cloud sync via email magic-link login, all you need is a free Supabase project.
+Without sign-in the app works fully (progress saved locally). To enable cloud sync via email magic-link, you need two free services:
 
-1. Sign up at [supabase.com](https://supabase.com), click **New Project**, pick any region + DB password, wait ~1 min.
-2. **SQL Editor** → paste contents of [`supabase-schema.sql`](./supabase-schema.sql) → **Run**.
-3. **Settings → API** → copy `Project URL` and `anon` (public) key.
-4. Add them to your Vercel project (**Settings → Environment Variables**) as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, then redeploy.
-5. (Optional) **Authentication → URL Configuration** in Supabase: set Site URL to your Vercel URL, and add `http://localhost:3000` to additional redirect URLs.
+1. **Vercel KV (Upstash Redis)** — Vercel project → **Storage → Create Database → Upstash Redis** (Marketplace, free tier). Click **Connect Project** so it auto-injects `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
+2. **Resend** for transactional email — sign up at [resend.com](https://resend.com), **API Keys → Create API Key**, copy it. Add to Vercel env vars as `RESEND_API_KEY`. (Optional: verify a domain to send from a custom address via `EMAIL_FROM`. Otherwise the default sender `onboarding@resend.dev` works but only delivers to your Resend account email.)
+3. Redeploy. The "Sign in" button in the navbar will now send a one-tap login link to whatever email you enter.
 
-That's it — no Google OAuth, no service-role keys. RLS keeps each user's progress private. Local dev: copy `.env.example` → `.env.local`, fill the same 2 values, `bun run dev`.
+Sessions are stored server-side in KV with a 30-day TTL, identified by an httpOnly cookie. Progress is stored under `progress:{email}`.
 
 ## Project layout
 

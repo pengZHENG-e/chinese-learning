@@ -1,24 +1,24 @@
 "use client";
 import { useEffect, useState } from "react";
 import { LogIn, LogOut, Loader2, Mail, Cloud, CloudOff, Check } from "lucide-react";
-import { getSupabase, useSupabaseSession } from "@/lib/supabase-client";
+import { useUser } from "@/lib/auth-client";
 
 export default function AuthButton() {
-  const { session, loading, enabled } = useSupabaseSession();
+  const { user, configured, loading, sendMagicLink, signOut } = useUser();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Auto-close menu when auth state changes
+  // Clear popover state when auth state changes
   useEffect(() => {
     setOpen(false);
     setSent(false);
     setError(null);
-  }, [session?.user?.id]);
+  }, [user?.email]);
 
-  if (!enabled) {
+  if (!configured && !loading) {
     return (
       <span
         title="Cloud sync not configured. Progress is saved on this device only."
@@ -37,8 +37,7 @@ export default function AuthButton() {
     );
   }
 
-  // Signed out
-  if (!session?.user) {
+  if (!user) {
     return (
       <div className="relative">
         <button
@@ -61,7 +60,7 @@ export default function AuthButton() {
                   <div className="flex items-start gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
                     <Check size={14} className="mt-0.5 shrink-0" />
                     <span>
-                      Check <strong>{email}</strong> for a magic link. Click it to sign in (works across devices).
+                      Check <strong>{email}</strong> for a sign-in link. Open it on any device — your progress will sync.
                     </span>
                   </div>
                 ) : (
@@ -70,15 +69,9 @@ export default function AuthButton() {
                       e.preventDefault();
                       setSending(true);
                       setError(null);
-                      const sb = getSupabase()!;
-                      const redirect =
-                        typeof window !== "undefined" ? window.location.origin : undefined;
-                      const { error } = await sb.auth.signInWithOtp({
-                        email,
-                        options: { emailRedirectTo: redirect },
-                      });
+                      const res = await sendMagicLink(email);
                       setSending(false);
-                      if (error) setError(error.message);
+                      if ("error" in res) setError(res.error);
                       else setSent(true);
                     }}
                     className="space-y-2"
@@ -104,7 +97,7 @@ export default function AuthButton() {
                     </button>
                     {error && <p className="text-xs text-rose-600">{error}</p>}
                     <p className="pt-1 text-[10px] text-zinc-500">
-                      No password needed — we email you a one-tap login link.
+                      No password — we email you a one-tap login link.
                     </p>
                   </form>
                 )}
@@ -116,9 +109,7 @@ export default function AuthButton() {
     );
   }
 
-  // Signed in
-  const u = session.user;
-  const initial = (u.email ?? "?")[0]?.toUpperCase();
+  const initial = (user.email ?? "?")[0]?.toUpperCase();
 
   return (
     <div className="relative">
@@ -138,11 +129,11 @@ export default function AuthButton() {
                 <Cloud size={12} /> Synced
               </div>
               <div className="truncate text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                {u.email}
+                {user.email}
               </div>
             </div>
             <button
-              onClick={async () => { await getSupabase()!.auth.signOut(); }}
+              onClick={() => signOut()}
               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
               <LogOut size={14} /> Sign out

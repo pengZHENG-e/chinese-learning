@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { Progress, ReviewState, Quality } from "@/lib/types";
 import { schedule } from "@/lib/srs";
-import { getSupabase, useSupabaseSession } from "@/lib/supabase-client";
+import { useUser } from "@/lib/auth-client";
 
 const KEY = "cl-progress-v1";
 const SYNC_DEBOUNCE_MS = 1500;
@@ -47,38 +47,39 @@ function score(p: Progress): number {
   return p.xp + Object.keys(p.reviews).length + Object.keys(p.lessonsDone).length;
 }
 
-async function fetchRemote(userId: string): Promise<Progress | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from("progress")
-    .select("data")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data.data as Progress;
+async function fetchRemote(): Promise<Progress | null> {
+  try {
+    const r = await fetch("/api/progress", { cache: "no-store" });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j.progress as Progress | null) ?? null;
+  } catch {
+    return null;
+  }
 }
 
-async function pushRemote(userId: string, p: Progress): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.from("progress").upsert(
-    { user_id: userId, data: p, updated_at: new Date().toISOString() },
-    { onConflict: "user_id" }
-  );
+async function pushRemote(p: Progress): Promise<void> {
+  try {
+    await fetch("/api/progress", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ progress: p }),
+    });
+  } catch {
+    // offline / network — local copy stays canonical
+  }
 }
 
 export function useProgress() {
-  const { session, loading: authLoading } = useSupabaseSession();
-  const userId = session?.user?.id ?? null;
+  const { user, loading: authLoading } = useUser();
+  const email = user?.email ?? null;
 
   const [progress, setProgress] = useState<Progress>(initial);
   const [hydrated, setHydrated] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const syncedForUser = useRef<string | null>(null);
+  const syncedFor = useRef<string | null>(null);
 
-  // Initial local hydration
   useEffect(() => {
     setProgress(loadLocal());
     setHydrated(true);
@@ -87,24 +88,24 @@ export function useProgress() {
   // On sign-in: pull remote and reconcile
   useEffect(() => {
     if (!hydrated || authLoading) return;
-    if (!userId) {
-      syncedForUser.current = null;
+    if (!email) {
+      syncedFor.current = null;
       return;
     }
-    if (syncedForUser.current === userId) return;
-    syncedForUser.current = userId;
+    if (syncedFor.current === email) return;
+    syncedFor.current = email;
 
     (async () => {
       setSyncing(true);
-      const remote = await fetchRemote(userId);
+      const remote = await fetchRemote();
       const local = loadLocal();
       let winner: Progress;
       if (!remote) {
         winner = local;
-        await pushRemote(userId, winner);
+        await pushRemote(winner);
       } else if (score(local) > score(remote)) {
         winner = local;
-        await pushRemote(userId, winner);
+        await pushRemote(winner);
       } else {
         winner = remote;
       }
@@ -112,19 +113,19 @@ export function useProgress() {
       setProgress(winner);
       setSyncing(false);
     })();
-  }, [userId, hydrated, authLoading]);
+  }, [email, hydrated, authLoading]);
 
   // Debounced push on every change while signed in
   useEffect(() => {
-    if (!hydrated || !userId) return;
+    if (!hydrated || !email) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
-      pushRemote(userId, progress);
+      pushRemote(progress);
     }, SYNC_DEBOUNCE_MS);
     return () => {
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
-  }, [progress, userId, hydrated]);
+  }, [progress, email, hydrated]);
 
   const update = useCallback((next: Progress | ((p: Progress) => Progress)) => {
     setProgress(prev => {
